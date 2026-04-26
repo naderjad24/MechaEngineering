@@ -1,0 +1,15 @@
+streamlit
+numpy
+pandas
+matplotlib
+scikit-learn
+librosa
+soundfile
+joblib
+tqdm
+scipy
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+
+torch
+torchaudio
