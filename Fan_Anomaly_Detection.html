@@ -1,0 +1,2132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Fan Anomaly Detection</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" crossorigin="anonymous"></script>
+
+<style>
+  :root{
+    --navy:#264653;
+    --navy-2:#1d3742;
+    --teal:#2a9d8f;
+    --teal-deep:#1f7a70;
+    --coral:#e76f51;
+    --coral-2:#d65a3c;
+    --red:#e63946;
+    --blue:#3a7ca5;
+    --blue-soft:#5a96bb;
+    --bg:#f6f8fa;
+    --card:#ffffff;
+    --ink:#1a2530;
+    --muted:#6b7280;
+    --muted-2:#9aa3ad;
+    --line:#e6e9ee;
+    --line-2:#eef1f5;
+    --green:#2f9e6e;
+    --amber:#e2a93b;
+    --orange:#e07a3a;
+    --shadow: 0 1px 2px rgba(20,30,40,.04), 0 8px 28px rgba(20,30,40,.06);
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--bg);
+    -webkit-font-smoothing:antialiased;
+    font-size:14.5px;
+    line-height:1.5;
+  }
+
+  /* App shell */
+  .app{max-width:1240px;margin:0 auto;padding:24px 24px 48px}
+
+  /* Header */
+  .hdr{
+    position:relative;
+    border-radius:14px;
+    padding:28px 32px;
+    color:#eaf3f1;
+    background:
+      radial-gradient(120% 140% at 100% 0%, rgba(42,157,143,.55) 0%, rgba(42,157,143,0) 55%),
+      radial-gradient(80% 120% at 0% 100%, rgba(58,124,165,.35) 0%, rgba(58,124,165,0) 60%),
+      linear-gradient(135deg, #1d3742 0%, #264653 55%, #285c5c 100%);
+    overflow:hidden;
+    box-shadow:var(--shadow);
+  }
+  .hdr::after{
+    content:"";position:absolute;inset:0;pointer-events:none;
+    background-image:
+      linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+    background-size: 40px 40px, 40px 40px;
+    mask-image: radial-gradient(60% 100% at 80% 50%, #000 0%, transparent 75%);
+    -webkit-mask-image: radial-gradient(60% 100% at 80% 50%, #000 0%, transparent 75%);
+  }
+  .hdr-row{display:flex;align-items:center;justify-content:space-between;gap:24px;position:relative;z-index:1}
+  .brand{display:flex;align-items:center;gap:14px;min-width:0}
+  .brand-mark{
+    width:44px;height:44px;border-radius:11px;
+    background:linear-gradient(150deg, rgba(255,255,255,.18), rgba(255,255,255,.04));
+    border:1px solid rgba(255,255,255,.18);
+    display:grid;place-items:center;flex:0 0 44px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+  }
+  .brand h1{
+    font-size:1.5rem;font-weight:600;letter-spacing:-0.01em;margin:0;color:#fff;
+  }
+  .brand .sub{
+    margin-top:3px;font-size:.86rem;color:rgba(234,243,241,.72);font-weight:400;
+    display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+  }
+  .brand .sub .dot{width:3px;height:3px;border-radius:50%;background:rgba(234,243,241,.45)}
+
+  .hdr-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+  .pill{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:5px 10px;border-radius:999px;
+    font-family:var(--mono);font-size:.74rem;font-weight:500;letter-spacing:.02em;
+    border:0;cursor:pointer;
+  }
+  .pill-status{
+    background:rgba(47,158,110,.18);
+    border:1px solid rgba(47,158,110,.45);
+    color:#9be7c2;
+  }
+  .pill-status .live{
+    width:6px;height:6px;border-radius:50%;background:#5cd99c;
+    box-shadow:0 0 0 0 rgba(92,217,156,.6);
+    animation:pulse 1.8s ease-out infinite;
+  }
+  .pill-action{
+    background:rgba(255,255,255,.10);
+    border:1px solid rgba(255,255,255,.20);
+    color:#eaf3f1;
+    transition:all .15s ease;
+  }
+  .pill-action:hover{
+    background:rgba(255,255,255,.18);
+    border-color:rgba(255,255,255,.32);
+  }
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(92,217,156,.55)}
+    70%{box-shadow:0 0 0 8px rgba(92,217,156,0)}
+    100%{box-shadow:0 0 0 0 rgba(92,217,156,0)}
+  }
+
+  /* KPI strip in header */
+  .kpis{
+    margin-top:22px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;
+    background:rgba(255,255,255,.08);
+    border-radius:10px;overflow:hidden;
+    border:1px solid rgba(255,255,255,.1);
+    position:relative;z-index:1;
+  }
+  .kpi{
+    padding:12px 16px;background:rgba(13,30,38,.35);
+  }
+  .kpi .k{
+    font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:rgba(234,243,241,.55);font-weight:600;
+  }
+  .kpi .v{
+    margin-top:4px;font-family:var(--mono);font-size:1.05rem;color:#fff;font-weight:500;font-variant-numeric:tabular-nums;
+  }
+  .kpi .v small{color:rgba(234,243,241,.55);font-weight:400;margin-left:2px;font-size:.75rem}
+
+  /* Layout */
+  .grid{
+    display:grid;grid-template-columns:minmax(360px, 420px) 1fr;
+    gap:24px;margin-top:24px;
+  }
+  @media (max-width: 960px){
+    .grid{grid-template-columns:1fr}
+  }
+
+  /* Cards */
+  .card{
+    background:var(--card);
+    border:1px solid var(--line);
+    border-radius:12px;
+    box-shadow:var(--shadow);
+  }
+  .card-hd{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 20px 14px;border-bottom:1px solid var(--line-2);
+  }
+  .card-hd h2{
+    font-size:1.05rem;font-weight:600;margin:0;letter-spacing:-0.005em;
+    display:flex;align-items:center;gap:10px;
+  }
+  .card-hd .step{
+    font-family:var(--mono);font-size:.7rem;color:var(--muted);
+    border:1px solid var(--line);border-radius:5px;padding:2px 6px;
+    font-weight:500;letter-spacing:.04em;
+  }
+  .card-bd{padding:20px}
+
+  /* Drop zone */
+  .drop{
+    border:2px dashed #c8d1da;border-radius:10px;
+    padding:32px 20px;text-align:center;
+    background:#fafbfc;
+    transition:all .18s ease;
+    cursor:pointer;
+  }
+  .drop:hover{border-color:#a8b3bf;background:#f5f8fa}
+  .drop.drag{
+    border-color:var(--teal);
+    background:#e8f7f4;
+  }
+  .drop.has-file{
+    border-style:solid;border-color:#cfe7e2;background:#f3fbf9;
+  }
+  .drop.error{
+    border-color:#f5b9a8;background:#fdf3ef;
+  }
+  .drop-icon{
+    width:48px;height:48px;margin:0 auto 12px;border-radius:12px;
+    background:linear-gradient(180deg, #f1f5f8, #e8eef2);
+    border:1px solid #dde4ea;
+    display:grid;place-items:center;color:var(--navy);
+  }
+  .drop.drag .drop-icon{background:linear-gradient(180deg,#d6f1ec,#bfe6df);border-color:#a8d9ce;color:var(--teal-deep)}
+  .drop-title{font-weight:500;font-size:.96rem;color:var(--ink)}
+  .drop-title b{color:var(--teal-deep);font-weight:600;border-bottom:1px dotted var(--teal-deep)}
+  .drop-hint{margin-top:6px;font-size:.82rem;color:var(--muted);font-family:var(--mono)}
+  .drop input[type=file]{display:none}
+
+  /* file chip */
+  .file-chip{
+    margin-top:14px;display:flex;align-items:center;gap:10px;
+    padding:10px 12px;background:#fff;border:1px solid var(--line);border-radius:9px;
+  }
+  .file-ico{
+    width:32px;height:32px;border-radius:8px;background:#eef5f3;color:var(--teal-deep);
+    display:grid;place-items:center;flex:0 0 32px;
+  }
+  .file-meta{flex:1;min-width:0}
+  .file-name{font-size:.88rem;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .file-sub{font-size:.74rem;color:var(--muted);font-family:var(--mono);margin-top:1px}
+  .file-x{
+    width:24px;height:24px;border-radius:6px;border:0;background:transparent;color:var(--muted);
+    cursor:pointer;display:grid;place-items:center;
+  }
+  .file-x:hover{background:#f3f4f6;color:var(--ink)}
+
+  /* Audio player */
+  .audio-row{
+    margin-top:10px;display:flex;align-items:center;gap:10px;
+    padding:8px 12px;background:#fbfcfd;border:1px solid var(--line-2);border-radius:9px;
+  }
+  .audio-btn{
+    width:30px;height:30px;border-radius:50%;border:0;cursor:pointer;
+    background:var(--teal);color:#fff;display:grid;place-items:center;flex:0 0 30px;
+    transition:all .15s ease;
+  }
+  .audio-btn:hover{background:var(--teal-deep)}
+  .audio-btn:disabled{background:#cdd5dd;cursor:not-allowed}
+  .audio-time{font-family:var(--mono);font-size:.74rem;color:var(--muted);font-variant-numeric:tabular-nums}
+  .audio-progress{
+    flex:1;height:4px;border-radius:3px;background:#eef1f5;overflow:hidden;cursor:pointer;
+    position:relative;
+  }
+  .audio-progress > i{display:block;height:100%;background:var(--teal);border-radius:3px;transition:width .08s linear}
+
+  /* Progress / status line */
+  .status{
+    margin-top:14px;display:flex;align-items:center;gap:10px;
+    font-size:.84rem;color:var(--muted);font-family:var(--mono);
+  }
+  .status.err{color:var(--coral-2)}
+  .status .spin{
+    width:12px;height:12px;border-radius:50%;
+    border:1.6px solid #cdd5dd;border-top-color:var(--teal);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .status .dot{width:6px;height:6px;border-radius:50%;background:var(--teal);box-shadow:0 0 0 3px rgba(42,157,143,.18)}
+  .status .dot.idle{background:#c8d1da;box-shadow:none}
+  .status .dot.err{background:var(--coral);box-shadow:0 0 0 3px rgba(231,111,81,.18)}
+
+  .progress{
+    margin-top:10px;height:4px;border-radius:3px;background:#eef1f5;overflow:hidden;
+  }
+  .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--teal),var(--blue));border-radius:3px;transition:width .25s ease}
+
+  /* Pipeline mini */
+  .pipe{
+    margin-top:18px;display:grid;grid-template-columns:1fr 1fr;gap:8px;
+  }
+  .pipe-item{
+    display:flex;align-items:center;gap:8px;
+    padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fbfcfd;
+  }
+  .pipe-item .pname{font-size:.78rem;font-weight:500}
+  .pipe-item .pmeta{margin-left:auto;font-family:var(--mono);font-size:.72rem;color:var(--muted)}
+  .pipe-led{width:7px;height:7px;border-radius:50%;background:#cdd5dd}
+  .pipe-led.on{background:var(--teal);box-shadow:0 0 0 3px rgba(42,157,143,.16)}
+  .pipe-led.run{background:var(--amber);box-shadow:0 0 0 3px rgba(226,169,59,.18);animation:blink 1s ease-in-out infinite}
+  .pipe-led.off{background:#cdd5dd}
+  @keyframes blink{50%{opacity:.35}}
+
+  /* Calibration banner */
+  .calib{
+    margin-top:14px;padding:10px 12px;border-radius:9px;
+    background:#f3f7fb;border:1px solid #d8e3ec;
+    display:flex;align-items:center;gap:10px;font-size:.82rem;
+  }
+  .calib.active{background:#eef7ee;border-color:#cae3cd}
+  .calib-ico{
+    width:24px;height:24px;border-radius:6px;background:#fff;border:1px solid #d8e3ec;
+    display:grid;place-items:center;color:var(--blue);flex:0 0 24px;
+  }
+  .calib.active .calib-ico{color:var(--green);border-color:#cae3cd}
+  .calib-txt{flex:1;min-width:0}
+  .calib-ttl{font-weight:500;font-size:.82rem}
+  .calib-sub{font-family:var(--mono);font-size:.7rem;color:var(--muted);margin-top:1px}
+  .calib-btn{
+    border:1px solid var(--line);background:#fff;color:var(--ink);
+    font-family:var(--mono);font-size:.72rem;font-weight:500;
+    padding:5px 9px;border-radius:6px;cursor:pointer;
+    transition:all .15s ease;
+  }
+  .calib-btn:hover{background:#f5f7f9;border-color:#cdd5dd}
+  .calib-btn.danger:hover{background:#fdeeea;border-color:#f5b9a8;color:#9c2e18}
+
+  /* Right column stack of cards */
+  .stack{display:flex;flex-direction:column;gap:24px}
+
+  /* Decision banner */
+  .decision{
+    display:flex;align-items:center;gap:14px;
+    padding:16px 20px;border-radius:11px;border:1px solid;
+    position:relative;overflow:hidden;
+  }
+  .decision .lbl{font-weight:600;font-size:1.02rem;letter-spacing:.01em}
+  .decision .sub{font-size:.82rem;font-family:var(--mono);margin-left:2px}
+  .decision .score{
+    margin-left:auto;font-family:var(--mono);font-size:.82rem;font-weight:500;
+    padding:6px 10px;border-radius:7px;background:rgba(255,255,255,.6);border:1px solid;
+  }
+  .decision-ico{
+    width:36px;height:36px;border-radius:9px;display:grid;place-items:center;flex:0 0 36px;
+    border:1px solid;
+  }
+  .dec-normal{
+    background:#effaf3;border-color:#c8eed8;color:#1f6b46;
+  }
+  .dec-normal .decision-ico{background:#d8f3e3;border-color:#bbe7cd;color:#2f9e6e}
+  .dec-normal .score{background:#fff;border-color:#c8eed8;color:#1f6b46}
+  .dec-anom{
+    background:#fdeeea;border-color:#f6cdc1;color:#9c2e18;
+  }
+  .dec-anom .decision-ico{background:#fbd9d0;border-color:#f5b9a8;color:#c2401e}
+  .dec-anom .score{background:#fff;border-color:#f6cdc1;color:#9c2e18}
+
+  /* Result grid */
+  .res-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
+  @media (max-width: 760px){.res-grid{grid-template-columns:1fr}}
+
+  /* Gauge */
+  .gauge-wrap{
+    background:#fbfcfd;border:1px solid var(--line-2);border-radius:11px;padding:18px;
+    display:flex;flex-direction:column;align-items:center;
+  }
+  .gauge-svg{width:100%;max-width:320px;height:auto;display:block}
+  .gauge-readout{margin-top:6px;text-align:center}
+  .gauge-pct{
+    font-family:var(--mono);font-size:2.4rem;font-weight:600;letter-spacing:-.02em;
+    line-height:1;color:var(--ink);font-variant-numeric:tabular-nums;
+  }
+  .gauge-pct small{font-size:1.1rem;font-weight:500;color:var(--muted);margin-left:2px}
+  .gauge-label{
+    margin-top:8px;font-size:.78rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+    padding:4px 10px;border-radius:999px;display:inline-block;
+  }
+  .gauge-zones{
+    margin-top:14px;width:100%;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;
+    font-family:var(--mono);font-size:.66rem;color:var(--muted);text-align:center;
+  }
+  .gauge-zones span{padding:3px 0;border-radius:4px;background:#f1f4f7}
+  .gauge-zones span.cur{background:#264653;color:#fff}
+
+  /* Diagnosis */
+  .diag{
+    background:#f5f7f9;border-radius:10px;padding:14px 16px 14px 18px;
+    border-left:4px solid var(--coral);
+    position:relative;
+  }
+  .diag .tag{
+    font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--muted);font-weight:600;
+  }
+  .diag .fault{
+    margin-top:4px;font-weight:600;font-size:.98rem;letter-spacing:.005em;color:var(--ink);
+  }
+  .diag .fault .why{
+    font-family:var(--mono);font-size:.78rem;font-weight:500;color:var(--coral-2);margin-left:6px;
+  }
+  .diag .ratio{margin-top:8px;font-size:.86rem;color:#4a5560;line-height:1.55;text-wrap:pretty}
+
+  /* harmonics */
+  .harm{margin-top:4px}
+  .harm-hd{
+    display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px;
+  }
+  .harm-hd h3{font-size:.92rem;font-weight:600;margin:0}
+  .harm-hd .f0{font-family:var(--mono);font-size:.76rem;color:var(--muted)}
+
+  .bars{display:flex;flex-direction:column;gap:6px}
+  .bar-row{
+    display:grid;grid-template-columns:42px 1fr 56px;align-items:center;gap:10px;
+    font-family:var(--mono);font-size:.78rem;
+  }
+  .bar-lbl{color:var(--ink);font-weight:500}
+  .bar-val{text-align:right;color:var(--muted);font-variant-numeric:tabular-nums}
+  .bar-val.hot{color:var(--coral-2);font-weight:600}
+  .bar-track{
+    position:relative;height:18px;background:#f5f7f9;border-radius:5px;
+    border:1px solid var(--line-2);
+  }
+  .bar-track::before{
+    content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:#cdd5dd;
+  }
+  .bar-fill{
+    position:absolute;top:2px;bottom:2px;border-radius:3px;
+    background:var(--blue);transition:left .3s ease, width .3s ease;
+  }
+  .bar-fill.hot{background:var(--coral)}
+  .bar-tick{
+    position:absolute;top:-4px;bottom:-4px;width:1px;background:rgba(231,111,81,.35);
+  }
+
+  .harm-axis{
+    display:flex;justify-content:space-between;
+    font-family:var(--mono);font-size:.7rem;color:var(--muted-2);
+    padding:6px 4px 0;
+    border-top:1px dashed var(--line);
+    margin-top:8px;
+  }
+
+  /* Signal view (waveform + spectrogram) */
+  .signal-card{margin-top:0}
+  .signal-hd-tabs{display:flex;gap:4px;margin-left:auto}
+  .sig-tab{
+    border:1px solid var(--line);background:#fff;color:var(--muted);
+    font-family:var(--mono);font-size:.72rem;font-weight:500;
+    padding:5px 10px;border-radius:6px;cursor:pointer;
+    transition:all .15s ease;
+  }
+  .sig-tab:hover{background:#f5f7f9}
+  .sig-tab.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+  .sig-canvas-wrap{
+    position:relative;border:1px solid var(--line-2);border-radius:9px;overflow:hidden;
+    background:#0d1d26;
+  }
+  .sig-canvas-wrap canvas{display:block;width:100%;height:auto}
+  .sig-meta{
+    display:flex;justify-content:space-between;
+    padding:8px 12px;font-family:var(--mono);font-size:.72rem;color:var(--muted);
+    border-top:1px solid var(--line-2);background:#fbfcfd;
+  }
+
+  /* idle placeholder */
+  .placeholder{
+    min-height:380px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    text-align:center;padding:32px;color:var(--muted);
+  }
+  .placeholder .icon{
+    width:56px;height:56px;border-radius:14px;
+    background:linear-gradient(180deg,#f4f7f9,#e9eef2);
+    border:1px solid var(--line);
+    display:grid;place-items:center;color:var(--navy);margin-bottom:14px;
+  }
+  .placeholder h3{margin:0;font-size:1rem;font-weight:600;color:var(--ink)}
+  .placeholder p{margin:6px 0 0;max-width:340px;font-size:.9rem;line-height:1.55}
+
+  .skeleton-row{
+    margin-top:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;width:100%;max-width:340px;
+  }
+  .skeleton-row span{
+    height:8px;border-radius:4px;background:linear-gradient(90deg,#eef1f5,#e3e8ed,#eef1f5);
+    background-size:200% 100%;animation:sk 1.6s ease-in-out infinite;
+  }
+  .skeleton-row span:nth-child(2){animation-delay:.15s}
+  .skeleton-row span:nth-child(3){animation-delay:.3s}
+  @keyframes sk{0%,100%{background-position:200% 0}50%{background-position:-200% 0}}
+
+  /* Settings drawer */
+  .settings{
+    margin-top:24px;background:var(--card);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);
+  }
+  .settings-hd{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 20px;cursor:pointer;user-select:none;
+  }
+  .settings-hd h2{font-size:.95rem;font-weight:600;margin:0;display:flex;align-items:center;gap:10px}
+  .settings-hd .chev{transition:transform .2s ease;color:var(--muted)}
+  .settings.open .chev{transform:rotate(180deg)}
+  .settings-bd{
+    display:none;padding:4px 20px 20px;border-top:1px solid var(--line-2);
+  }
+  .settings.open .settings-bd{display:block}
+  .set-row{
+    display:grid;grid-template-columns:200px 1fr;gap:14px;align-items:center;
+    padding:10px 0;border-bottom:1px dashed var(--line-2);
+  }
+  .set-row:last-child{border-bottom:0}
+  .set-lbl{font-size:.86rem;font-weight:500}
+  .set-lbl small{display:block;color:var(--muted);font-weight:400;font-size:.76rem;margin-top:2px}
+  .set-input{
+    width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:6px;
+    font-family:var(--mono);font-size:.82rem;background:#fff;color:var(--ink);
+  }
+  .set-input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 3px rgba(42,157,143,.12)}
+  .set-slider{width:100%}
+  .set-row .row{gap:14px}
+  .set-row .row .set-input{flex:1;min-width:0}
+
+  /* History */
+  .hist-table{
+    margin-top:0;width:100%;border-collapse:collapse;
+    font-size:.82rem;
+  }
+  .hist-table th{
+    text-align:left;padding:8px 10px;font-family:var(--mono);font-size:.7rem;
+    color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;
+    border-bottom:1px solid var(--line-2);
+  }
+  .hist-table td{
+    padding:9px 10px;border-bottom:1px solid var(--line-2);
+    font-family:var(--mono);font-size:.78rem;
+  }
+  .hist-table tr:last-child td{border-bottom:0}
+  .hist-table .name{font-family:var(--sans);font-weight:500;font-size:.84rem}
+  .hist-table .pill-dec{
+    display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:99px;
+    font-size:.7rem;font-weight:600;letter-spacing:.04em;
+  }
+  .hist-table .pill-dec.normal{background:#e6f6ee;color:#1f6b46}
+  .hist-table .pill-dec.anomaly{background:#fbdbd6;color:#9c2e18}
+  .hist-empty{
+    padding:24px 12px;text-align:center;color:var(--muted);font-size:.86rem;
+  }
+
+  /* Footer */
+  .ftr{
+    margin-top:32px;display:flex;align-items:center;justify-content:space-between;
+    color:var(--muted);font-size:.82rem;flex-wrap:wrap;gap:12px;
+  }
+  .ftr a{color:var(--muted);text-decoration:none;border-bottom:1px dotted #cdd5dd;padding-bottom:1px;cursor:pointer}
+  .ftr a:hover{color:var(--navy);border-bottom-color:var(--navy)}
+  .ftr .links{display:flex;gap:16px;align-items:center;font-family:var(--mono);font-size:.78rem}
+  .ftr .links .s{width:6px;height:6px;border-radius:50%;background:var(--green)}
+
+  /* Toast */
+  .toast{
+    position:fixed;bottom:24px;right:24px;z-index:50;
+    background:#fff;border:1px solid var(--line);border-radius:10px;
+    padding:12px 16px;box-shadow:0 10px 40px rgba(20,30,40,.18);
+    display:flex;align-items:center;gap:10px;font-size:.86rem;
+    animation:slidein .25s ease;max-width:340px;
+  }
+  .toast.err{border-left:4px solid var(--coral)}
+  .toast.ok{border-left:4px solid var(--green)}
+  .toast.info{border-left:4px solid var(--blue)}
+  @keyframes slidein{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+  /* utility */
+  .row{display:flex;align-items:center;gap:8px}
+  .mono{font-family:var(--mono)}
+  .muted{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useMemo, useRef, useCallback } = React;
+
+/* ════════════════════════════════════════════════════════════════════
+   AUDIO ENGINE — FFT, feature extraction, anomaly scoring
+   ════════════════════════════════════════════════════════════════════ */
+
+// Iterative radix-2 Cooley–Tukey FFT, in-place
+function fftInPlace(re, im) {
+  const n = re.length;
+  // bit-reverse permutation
+  for (let i = 1, j = 0; i < n; i++) {
+    let bit = n >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      let t = re[i]; re[i] = re[j]; re[j] = t;
+      t = im[i]; im[i] = im[j]; im[j] = t;
+    }
+  }
+  // butterflies
+  for (let len = 2; len <= n; len <<= 1) {
+    const half = len >> 1;
+    const ang = -2 * Math.PI / len;
+    const wRealStep = Math.cos(ang), wImagStep = Math.sin(ang);
+    for (let i = 0; i < n; i += len) {
+      let wRe = 1, wIm = 0;
+      for (let k = 0; k < half; k++) {
+        const idx1 = i + k, idx2 = i + k + half;
+        const tRe = re[idx2] * wRe - im[idx2] * wIm;
+        const tIm = re[idx2] * wIm + im[idx2] * wRe;
+        re[idx2] = re[idx1] - tRe;
+        im[idx2] = im[idx1] - tIm;
+        re[idx1] += tRe;
+        im[idx1] += tIm;
+        const nRe = wRe * wRealStep - wIm * wImagStep;
+        wIm = wRe * wImagStep + wIm * wRealStep;
+        wRe = nRe;
+      }
+    }
+  }
+}
+
+function nextPow2(n){ let p = 1; while (p < n) p <<= 1; return p; }
+
+function hannWindow(N){
+  const w = new Float32Array(N);
+  for (let i = 0; i < N; i++) w[i] = 0.5 * (1 - Math.cos(2*Math.PI*i/(N-1)));
+  return w;
+}
+
+// Mix audio buffer to mono Float32Array
+function mixToMono(audioBuffer){
+  const ch = audioBuffer.numberOfChannels;
+  const L = audioBuffer.length;
+  const out = new Float32Array(L);
+  if (ch === 1) {
+    out.set(audioBuffer.getChannelData(0));
+  } else {
+    for (let c = 0; c < ch; c++) {
+      const data = audioBuffer.getChannelData(c);
+      for (let i = 0; i < L; i++) out[i] += data[i] / ch;
+    }
+  }
+  return out;
+}
+
+// Decode a File into an AudioBuffer using OfflineAudioContext for predictable behavior
+async function decodeAudioFile(file){
+  const arrayBuffer = await file.arrayBuffer();
+  // Use a temp AudioContext to decode (works for WAV at any sample rate)
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  const ctx = new Ctx();
+  try {
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    return audioBuffer;
+  } finally {
+    if (ctx.state !== "closed") ctx.close();
+  }
+}
+
+// Compute STFT → average magnitude spectrum across all frames.
+// Returns { spec: Float32Array (length = frameSize/2), freqs: Float32Array, frames: 2D array of magnitudes for spectrogram }
+function computeSpectrum(samples, sampleRate, frameSize, hopSize, keepFrames){
+  const N = frameSize;
+  const half = N >> 1;
+  const win = hannWindow(N);
+  const re = new Float32Array(N);
+  const im = new Float32Array(N);
+  const avg = new Float64Array(half);
+  let count = 0;
+  const frames = keepFrames ? [] : null;
+
+  // Limit to first ~30 seconds to keep things snappy
+  const maxSamples = Math.min(samples.length, sampleRate * 30);
+
+  for (let start = 0; start + N <= maxSamples; start += hopSize) {
+    for (let i = 0; i < N; i++){
+      re[i] = samples[start + i] * win[i];
+      im[i] = 0;
+    }
+    fftInPlace(re, im);
+    let frameMags;
+    if (keepFrames) frameMags = new Float32Array(half);
+    for (let k = 0; k < half; k++) {
+      const m = Math.sqrt(re[k]*re[k] + im[k]*im[k]);
+      avg[k] += m;
+      if (keepFrames) frameMags[k] = m;
+    }
+    if (keepFrames) frames.push(frameMags);
+    count++;
+  }
+  if (count > 0) for (let k = 0; k < half; k++) avg[k] /= count;
+
+  const spec = new Float32Array(half);
+  for (let k = 0; k < half; k++) spec[k] = avg[k];
+
+  const freqs = new Float32Array(half);
+  for (let k = 0; k < half; k++) freqs[k] = k * sampleRate / N;
+
+  return { spec, freqs, frames, frameCount: count, frameSize: N, hopSize };
+}
+
+// Find fundamental frequency f0 by peak picking in the low-frequency band
+function findFundamental(spec, freqs, fmin, fmax){
+  let bestK = -1, bestVal = -Infinity;
+  for (let k = 1; k < spec.length; k++) {
+    const f = freqs[k];
+    if (f < fmin || f > fmax) continue;
+    if (spec[k] > bestVal) {
+      bestVal = spec[k]; bestK = k;
+    }
+  }
+  if (bestK < 0) return { f0: NaN, k: -1, mag: 0 };
+  // Parabolic interpolation for sub-bin accuracy
+  if (bestK > 0 && bestK < spec.length - 1) {
+    const a = spec[bestK-1], b = spec[bestK], c = spec[bestK+1];
+    const denom = (a - 2*b + c);
+    if (denom !== 0) {
+      const dk = 0.5*(a - c)/denom;
+      const f0 = (bestK + dk) * (freqs[1] - freqs[0]);
+      return { f0, k: bestK, mag: bestVal };
+    }
+  }
+  return { f0: freqs[bestK], k: bestK, mag: bestVal };
+}
+
+// Sum spectral energy in a band [fcenter*(1-w), fcenter*(1+w)]
+function bandEnergy(spec, freqs, fCenter, halfwidth){
+  const fLo = fCenter * (1 - halfwidth);
+  const fHi = fCenter * (1 + halfwidth);
+  let sum = 0;
+  for (let k = 0; k < spec.length; k++) {
+    if (freqs[k] >= fLo && freqs[k] <= fHi) {
+      sum += spec[k] * spec[k];
+    }
+  }
+  return sum;
+}
+
+function broadbandEnergy(spec, freqs, fLo, fHi){
+  let sum = 0;
+  for (let k = 0; k < spec.length; k++) {
+    if (freqs[k] >= fLo && freqs[k] <= fHi) {
+      sum += spec[k] * spec[k];
+    }
+  }
+  return sum;
+}
+
+function rms(samples){
+  let s = 0;
+  for (let i = 0; i < samples.length; i++) s += samples[i]*samples[i];
+  return Math.sqrt(s / samples.length);
+}
+
+function spectralCentroid(spec, freqs){
+  let num = 0, den = 0;
+  for (let k = 1; k < spec.length; k++){ num += freqs[k]*spec[k]; den += spec[k]; }
+  return den === 0 ? 0 : num / den;
+}
+
+function spectralFlatness(spec){
+  // geometric mean / arithmetic mean of magnitudes (skip DC)
+  let logSum = 0, arSum = 0, n = 0;
+  for (let k = 1; k < spec.length; k++) {
+    const v = spec[k] + 1e-12;
+    logSum += Math.log(v);
+    arSum += v;
+    n++;
+  }
+  if (n === 0 || arSum === 0) return 0;
+  return Math.exp(logSum/n) / (arSum/n);
+}
+
+// Median + MAD of an array, used to compute self-referential z-scores
+function medianMAD(arr){
+  const sorted = Array.from(arr).sort((a,b)=>a-b);
+  const med = sorted[sorted.length>>1];
+  const dev = sorted.map(v=>Math.abs(v-med)).sort((a,b)=>a-b);
+  const mad = dev[dev.length>>1];
+  return { median: med, mad: mad };
+}
+
+// Extract the full feature set from raw mono samples
+function extractFeatures(samples, sampleRate, opts){
+  const fmin = opts.f0Min ?? 10;
+  const fmax = opts.f0Max ?? 200;
+
+  // STFT params
+  const frameSize = sampleRate >= 32000 ? 4096 : 2048;
+  const hopSize = frameSize >> 2;
+
+  const { spec, freqs, frames, frameCount } = computeSpectrum(samples, sampleRate, frameSize, hopSize, true);
+
+  // Fundamental
+  const { f0, k: f0bin, mag: f0mag } = findFundamental(spec, freqs, fmin, fmax);
+
+  // Harmonic energies
+  const harmDefs = [
+    { k: "½×", mult: 0.5 },
+    { k: "1×", mult: 1.0 },
+    { k: "2×", mult: 2.0 },
+    { k: "3×", mult: 3.0 },
+    { k: "4×", mult: 4.0 },
+    { k: "5×", mult: 5.0 },
+  ];
+  const halfwidth = 0.04; // ±4% around each harmonic
+  const harmEnergies = {};
+  const harmDb = {};
+  for (const h of harmDefs) {
+    const fc = f0 * h.mult;
+    if (!isFinite(fc) || fc <= 0 || fc > sampleRate/2) {
+      harmEnergies[h.k] = 0;
+      harmDb[h.k] = -120;
+    } else {
+      const e = bandEnergy(spec, freqs, fc, halfwidth);
+      harmEnergies[h.k] = e;
+      harmDb[h.k] = 10 * Math.log10(e + 1e-20);
+    }
+  }
+
+  // Broadband (high frequency) energy
+  const bbLo = Math.min(3000, sampleRate * 0.25);
+  const bbHi = sampleRate / 2;
+  const bbE = broadbandEnergy(spec, freqs, bbLo, bbHi);
+  const bbDb = 10 * Math.log10(bbE + 1e-20);
+
+  // Self-referential noise floor (median energy across non-harmonic bins)
+  // We compute log-spectrum then median + MAD
+  const logSpec = new Float32Array(spec.length);
+  for (let k = 0; k < spec.length; k++) logSpec[k] = 20 * Math.log10(spec[k] + 1e-12);
+
+  // Build a mask removing ±4% around each harmonic so floor is unbiased
+  const exclude = new Set();
+  for (const h of harmDefs) {
+    const fc = f0 * h.mult;
+    if (!isFinite(fc) || fc <= 0 || fc > sampleRate/2) continue;
+    for (let k = 0; k < freqs.length; k++) {
+      if (freqs[k] >= fc*(1-halfwidth) && freqs[k] <= fc*(1+halfwidth)) exclude.add(k);
+    }
+  }
+  const floorBins = [];
+  for (let k = 1; k < logSpec.length; k++) if (!exclude.has(k)) floorBins.push(logSpec[k]);
+  const { median: floorMed, mad: floorMad } = medianMAD(floorBins);
+  const floorSigma = Math.max(1.4826 * floorMad, 0.5); // robust σ; minimum to avoid div-by-zero
+
+  // Other features
+  const rmsVal = rms(samples);
+  const cen = spectralCentroid(spec, freqs);
+  const flat = spectralFlatness(spec);
+
+  // Crest factor of the spectrum (peakiness)
+  let peakSpec = 0, sumSpec = 0;
+  for (let k = 1; k < spec.length; k++){ if (spec[k]>peakSpec) peakSpec = spec[k]; sumSpec += spec[k]; }
+  const meanSpec = sumSpec / (spec.length-1);
+  const crest = meanSpec > 0 ? peakSpec / meanSpec : 0;
+
+  return {
+    sampleRate,
+    duration: samples.length / sampleRate,
+    frameSize, hopSize, frameCount,
+    spec, freqs, frames,
+    f0, f0bin, f0mag,
+    harmEnergies, harmDb,
+    bbDb, bbLo, bbHi,
+    floorMed, floorSigma,
+    rms: rmsVal,
+    spectralCentroid: cen,
+    spectralFlatness: flat,
+    spectralCrest: crest,
+    samplesLength: samples.length,
+  };
+}
+
+// Compute z-scores for harmonics & broadband.
+// Without calibration: z = (db - floor_median) / floor_sigma  (peak-prominence above noise floor)
+// With calibration: z = (db - calibration_mean) / calibration_std
+function computeZScores(features, calibration){
+  const out = {};
+  if (calibration) {
+    for (const k of Object.keys(features.harmDb)) {
+      const m = calibration.harm[k]?.mean ?? features.floorMed;
+      const s = Math.max(calibration.harm[k]?.std ?? features.floorSigma, 0.5);
+      out[k] = (features.harmDb[k] - m) / s;
+    }
+    const bbM = calibration.bb.mean;
+    const bbS = Math.max(calibration.bb.std, 0.5);
+    out["BB"] = (features.bbDb - bbM) / bbS;
+    out._mode = "calibrated";
+  } else {
+    for (const k of Object.keys(features.harmDb)) {
+      out[k] = (features.harmDb[k] - features.floorMed) / features.floorSigma;
+    }
+    out["BB"] = (features.bbDb - features.floorMed) / features.floorSigma;
+    // Self-ref: harmonics usually sit well above the floor, so subtract a typical "expected"
+    // prominence (~6 dB / 1.5σ) so that a CLEAN fan with a normal 1× tone reads ~0
+    // and a strong dominant harmonic reads positive.
+    const EXPECTED_PROMINENCE = 1.5;
+    for (const k of Object.keys(out)) {
+      if (k === "_mode") continue;
+      out[k] = out[k] - EXPECTED_PROMINENCE;
+    }
+    out._mode = "self-referential";
+  }
+  return out;
+}
+
+// Fault classification
+const FAULT_TEMPLATES = {
+  unbalance: {
+    title: "UNBALANCE",
+    rationale: "Dominant first-harmonic energy with little contribution from higher multiples is consistent with rotor unbalance — likely fouling, blade erosion, or an accumulated debris ring on the impeller. Recommend impeller cleaning and a single-plane field balance before re-evaluating.",
+  },
+  misalignment: {
+    title: "MISALIGNMENT",
+    rationale: "Strong second-harmonic energy with a smaller 1× component is the acoustic fingerprint of shaft parallel or angular misalignment. Coupling stiffness asymmetries radiate at 2× rotation frequency under load. Recommend a hot-alignment laser check at the motor-fan coupling and inspection of the flexible element.",
+  },
+  looseness: {
+    title: "LOOSENESS",
+    rationale: "A sub-synchronous ½× component combined with a broad harmonic stack is the signature of mechanical looseness — typically loose hold-down bolts, a worn pedestal, or excessive bearing clearance. Inspect base-plate fasteners and bearing housing fits before extended operation.",
+  },
+  bearing: {
+    title: "BEARING DEGRADATION",
+    rationale: "Elevated broadband energy with no clean harmonic peak suggests rolling-element bearing wear — early spalling, lubricant breakdown, or cage fatigue. Schedule a vibration enveloping test and bearing replacement at the next available downtime.",
+  },
+  diffuse: {
+    title: "DIFFUSE ANOMALY",
+    rationale: "The clip deviates from baseline but does not match a single dominant harmonic signature. Multiple low-grade indicators are above threshold. Recommend re-recording under matched operating conditions and inspecting the asset visually before drawing conclusions.",
+  }
+};
+
+function classifyFault(zScores, threshold){
+  // Find the dominant (max) z-score and the second-largest
+  const items = ["½×","1×","2×","3×","4×","5×","BB"].map(k => ({ k, z: zScores[k] }));
+  items.sort((a,b)=> b.z - a.z);
+  const top = items[0];
+  if (top.z < threshold) return null;
+
+  let kind = "diffuse";
+  let detail = "";
+  if (top.k === "BB") { kind = "bearing"; detail = `(broadband, +${top.z.toFixed(1)}σ)`; }
+  else if (top.k === "½×") { kind = "looseness"; detail = `(½× + harmonic stack, +${top.z.toFixed(1)}σ)`; }
+  else if (top.k === "2×") { kind = "misalignment"; detail = `(2× dominant, +${top.z.toFixed(1)}σ)`; }
+  else if (top.k === "1×") { kind = "unbalance"; detail = `(1× dominant, +${top.z.toFixed(1)}σ)`; }
+  else if (top.k === "3×" || top.k === "4×" || top.k === "5×") {
+    // Higher harmonic dominance → more like looseness / blade-pass
+    kind = "looseness"; detail = `(${top.k} dominant, +${top.z.toFixed(1)}σ)`;
+  }
+  return { kind, detail, top, ...FAULT_TEMPLATES[kind] };
+}
+
+// Map z-scores → severity (0–100) and overall anomaly score (0–1)
+function scoreAnomaly(features, calibration, threshold){
+  const z = computeZScores(features, calibration);
+  const harmZ = ["½×","1×","2×","3×","4×","5×"].map(k => z[k]);
+  const maxHarmZ = Math.max(...harmZ);
+  const bbZ = z["BB"];
+  const peakZ = Math.max(maxHarmZ, bbZ);
+
+  // Severity (0–100): mode-aware, because peakZ has very different distributions.
+  //
+  // CALIBRATED mode — normal clips score peakZ ≈ 0, anomalies ≈ 2–4σ.
+  //   Tight curve: threshold lands ~75%, 2× threshold ~90%.
+  //
+  // SELF-REFERENTIAL mode — peakZ measures peak prominence above the in-clip
+  //   noise floor. Because every fan has strong tonal content, even healthy
+  //   recordings produce peakZ ≈ 5–9σ; truly faulty ones reach 12σ+. The curve
+  //   must therefore be stretched far more, reserving CRITICAL for genuine
+  //   outliers (>8× threshold). Without this, every clip pegs at SEVERE.
+  const t = Math.max(0.1, threshold);
+  let severity;
+  if (z._mode === "calibrated") {
+    if (peakZ <= 0)         severity = Math.max(0, 30 + peakZ * 8);
+    else if (peakZ <= t)    severity = 30 + (peakZ / t) * 45;                      // 0..t   → 30..75
+    else if (peakZ <= 2*t)  severity = 75 + ((peakZ - t) / t) * 15;                // t..2t  → 75..90
+    else if (peakZ <= 3*t)  severity = 90 + ((peakZ - 2*t) / t) * 7;               // 2t..3t → 90..97
+    else                    severity = Math.min(100, 97 + (peakZ - 3*t) * 0.6);
+  } else {
+    // self-referential — broad spread
+    if (peakZ <= 0)         severity = 0;
+    else if (peakZ <= t)    severity = (peakZ / t) * 25;                           // 0..t   → 0..25
+    else if (peakZ <= 2*t)  severity = 25 + ((peakZ - t) / t) * 25;                // t..2t  → 25..50
+    else if (peakZ <= 3*t)  severity = 50 + ((peakZ - 2*t) / t) * 20;              // 2t..3t → 50..70
+    else if (peakZ <= 4*t)  severity = 70 + ((peakZ - 3*t) / t) * 12;              // 3t..4t → 70..82
+    else if (peakZ <= 5*t)  severity = 82 + ((peakZ - 4*t) / t) * 8;               // 4t..5t → 82..90
+    else if (peakZ <= 6*t)  severity = 90 + ((peakZ - 5*t) / t) * 5;               // 5t..6t → 90..95
+    else if (peakZ <= 8*t)  severity = 95 + ((peakZ - 6*t) / (2*t)) * 4;           // 6t..8t → 95..99
+    else                    severity = Math.min(100, 99 + (peakZ - 8*t) * 0.1);
+  }
+  severity = Math.max(0, Math.min(100, severity));
+
+  // The severity gauge zone is the authoritative health verdict, not the raw
+  // peakZ ≥ threshold check. In self-referential mode peakZ trips for every
+  // tonal recording, but if the stretched mapping puts severity in the NOMINAL
+  // band (<70%), the clip is consistent with healthy operation and should
+  // present as NORMAL — green banner, no fault, "no fault signature".
+  const isNominal = severity < 70;
+  const flagged = peakZ >= threshold && !isNominal;
+  const fault = flagged ? classifyFault(z, threshold) : null;
+  const decision = flagged ? "anomaly" : "normal";
+
+  // Anomaly score (0–1) is derived from severity so the banner number, gauge,
+  // and verdict can never contradict each other.
+  const score = severity / 100;
+
+  // Build z-score bars list in the exact order the UI expects
+  const bars = [
+    { k:"1×", z: z["1×"] },
+    { k:"2×", z: z["2×"] },
+    { k:"3×", z: z["3×"] },
+    { k:"4×", z: z["4×"] },
+    { k:"5×", z: z["5×"] },
+    { k:"½×", z: z["½×"] },
+    { k:"BB", z: z["BB"] },
+  ];
+
+  return { decision, score, severity, fault, bars, peakZ, mode: z._mode };
+}
+
+// Aggregate calibration baseline from one or more "normal" feature sets
+function aggregateBaseline(featuresList){
+  if (!featuresList.length) return null;
+  const harmKeys = ["½×","1×","2×","3×","4×","5×"];
+  const harm = {};
+  for (const k of harmKeys) {
+    const vals = featuresList.map(f => f.harmDb[k]).filter(v => isFinite(v));
+    const mean = vals.reduce((a,b)=>a+b,0) / vals.length;
+    const std = Math.sqrt(vals.reduce((a,b)=>a+(b-mean)*(b-mean),0) / Math.max(1, vals.length-1));
+    harm[k] = { mean, std };
+  }
+  const bbVals = featuresList.map(f => f.bbDb);
+  const bbMean = bbVals.reduce((a,b)=>a+b,0) / bbVals.length;
+  const bbStd = Math.sqrt(bbVals.reduce((a,b)=>a+(b-bbMean)*(b-bbMean),0) / Math.max(1, bbVals.length-1));
+  return {
+    nSamples: featuresList.length,
+    harm,
+    bb: { mean: bbMean, std: bbStd },
+  };
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   VISUALIZATION HELPERS
+   ════════════════════════════════════════════════════════════════════ */
+
+// Downsample raw samples for a min/max waveform overview
+function downsampleWaveform(samples, points){
+  const out = new Float32Array(points * 2); // pairs of (min, max)
+  const step = samples.length / points;
+  for (let i = 0; i < points; i++) {
+    const start = Math.floor(i * step);
+    const end = Math.min(samples.length, Math.floor((i+1) * step));
+    let mn = 0, mx = 0;
+    for (let j = start; j < end; j++) {
+      const v = samples[j];
+      if (v < mn) mn = v;
+      else if (v > mx) mx = v;
+    }
+    out[i*2] = mn; out[i*2+1] = mx;
+  }
+  return out;
+}
+
+function drawWaveform(canvas, waveform){
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+  // background gradient (matches dark navy theme)
+  const g = ctx.createLinearGradient(0,0,0,h);
+  g.addColorStop(0,"#11242e"); g.addColorStop(1,"#0d1d26");
+  ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
+  // grid
+  ctx.strokeStyle = "rgba(255,255,255,.05)"; ctx.lineWidth = 1;
+  for (let i = 1; i < 4; i++) {
+    const y = h * i / 4;
+    ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(w,y); ctx.stroke();
+  }
+  // zero line
+  ctx.strokeStyle = "rgba(255,255,255,.12)";
+  ctx.beginPath(); ctx.moveTo(0,h/2); ctx.lineTo(w,h/2); ctx.stroke();
+
+  if (!waveform) return;
+  const points = waveform.length / 2;
+  // find max abs for normalization
+  let maxAbs = 0;
+  for (let i = 0; i < waveform.length; i++) maxAbs = Math.max(maxAbs, Math.abs(waveform[i]));
+  if (maxAbs === 0) maxAbs = 1;
+
+  ctx.fillStyle = "rgba(42,157,143,.55)";
+  ctx.strokeStyle = "rgba(42,157,143,.95)";
+  ctx.beginPath();
+  for (let i = 0; i < points; i++) {
+    const mn = waveform[i*2] / maxAbs;
+    const mx = waveform[i*2+1] / maxAbs;
+    const x = (i / (points-1)) * w;
+    const yMin = h/2 - mx * h/2 * 0.92;
+    const yMax = h/2 - mn * h/2 * 0.92;
+    if (i === 0) ctx.moveTo(x, yMin);
+    ctx.lineTo(x, yMin);
+    ctx.lineTo(x, yMax);
+  }
+  ctx.stroke();
+}
+
+function viridis(t){
+  // approximate viridis colormap
+  t = Math.max(0, Math.min(1, t));
+  const stops = [
+    [68, 1, 84],     // 0
+    [59, 82, 139],   // 0.25
+    [33, 145, 140],  // 0.5
+    [94, 201, 98],   // 0.75
+    [253, 231, 37],  // 1
+  ];
+  const idx = Math.min(stops.length-2, Math.floor(t * (stops.length-1)));
+  const f = t * (stops.length-1) - idx;
+  const a = stops[idx], b = stops[idx+1];
+  return [
+    Math.round(a[0] + (b[0]-a[0])*f),
+    Math.round(a[1] + (b[1]-a[1])*f),
+    Math.round(a[2] + (b[2]-a[2])*f),
+  ];
+}
+
+function drawSpectrogram(canvas, frames, sampleRate, frameSize){
+  if (!frames || frames.length === 0) return;
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  ctx.scale(dpr, dpr);
+
+  const half = frameSize >> 1;
+  const nyq = sampleRate / 2;
+
+  // Build a log-frequency display: y in [0, h] → freq from fMinDisp to nyq
+  const fMinDisp = 20;
+  const logMin = Math.log10(fMinDisp), logMax = Math.log10(nyq);
+
+  // Determine global min/max in dB for color scaling
+  let dbMin = Infinity, dbMax = -Infinity;
+  // Sample sparingly to find range
+  const stepF = Math.max(1, Math.floor(frames.length/50));
+  for (let i = 0; i < frames.length; i += stepF) {
+    const f = frames[i];
+    for (let k = 1; k < half; k++) {
+      const db = 20 * Math.log10(f[k] + 1e-12);
+      if (db < dbMin) dbMin = db;
+      if (db > dbMax) dbMax = db;
+    }
+  }
+  // Clamp dynamic range to ~70 dB
+  dbMin = Math.max(dbMin, dbMax - 70);
+
+  const img = ctx.createImageData(w, h);
+  const data = img.data;
+  // Pre-compute y → bin mapping
+  const binForY = new Int32Array(h);
+  for (let y = 0; y < h; y++) {
+    const t = 1 - (y / (h-1));      // 0 at bottom = low freq
+    const f = Math.pow(10, logMin + t*(logMax - logMin));
+    let bin = Math.round(f / (sampleRate / frameSize));
+    if (bin < 1) bin = 1; if (bin >= half) bin = half - 1;
+    binForY[y] = bin;
+  }
+
+  for (let x = 0; x < w; x++) {
+    const fi = Math.min(frames.length - 1, Math.floor(x / w * frames.length));
+    const frame = frames[fi];
+    for (let y = 0; y < h; y++) {
+      const bin = binForY[y];
+      const m = frame[bin] + 1e-12;
+      const db = 20 * Math.log10(m);
+      let t = (db - dbMin) / (dbMax - dbMin);
+      if (t < 0) t = 0; else if (t > 1) t = 1;
+      const [r,g,b] = viridis(t);
+      const off = (y * w + x) * 4;
+      data[off]   = r;
+      data[off+1] = g;
+      data[off+2] = b;
+      data[off+3] = 255;
+    }
+  }
+  // Draw at native resolution then scale
+  const tmp = document.createElement("canvas");
+  tmp.width = w; tmp.height = h;
+  tmp.getContext("2d").putImageData(img, 0, 0);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(tmp, 0, 0, w, h);
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   ICONS
+   ════════════════════════════════════════════════════════════════════ */
+const Ico = {
+  Cloud: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||22} height={p.size||22} fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 18h10a4 4 0 0 0 .4-7.98A6 6 0 0 0 6 9.5 4 4 0 0 0 7 18Z"/>
+      <path d="M12 13v5"/><path d="m9.5 15.5 2.5-2.5 2.5 2.5"/>
+    </svg>
+  ),
+  Wave: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||18} height={p.size||18} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round">
+      <path d="M3 12h2l1.5-5 2 9 2-12 2 16 2-7 1.5 4H21"/>
+    </svg>
+  ),
+  Check: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||18} height={p.size||18} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="m5 12 4 4 10-10"/></svg>
+  ),
+  Warn: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||18} height={p.size||18} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 3 2.5 20h19L12 3Z"/><path d="M12 10v5"/><circle cx="12" cy="18" r=".8" fill="currentColor"/>
+    </svg>
+  ),
+  X: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||14} height={p.size||14} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>
+  ),
+  Fan: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||22} height={p.size||22} fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="2.2"/>
+      <path d="M12 2.5c2.6 0 4.4 1.6 4.4 3.6 0 2.7-3.2 3.5-4.4 5.5-1.2-2-4.4-2.8-4.4-5.5 0-2 1.8-3.6 4.4-3.6Z"/>
+      <path d="M21.5 12c0 2.6-1.6 4.4-3.6 4.4-2.7 0-3.5-3.2-5.5-4.4 2-1.2 2.8-4.4 5.5-4.4 2 0 3.6 1.8 3.6 4.4Z"/>
+      <path d="M12 21.5c-2.6 0-4.4-1.6-4.4-3.6 0-2.7 3.2-3.5 4.4-5.5 1.2 2 4.4 2.8 4.4 5.5 0 2-1.8 3.6-4.4 3.6Z"/>
+    </svg>
+  ),
+  Doc: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||14} height={p.size||14} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6M9 17h4"/>
+    </svg>
+  ),
+  Play: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||14} height={p.size||14} fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+  ),
+  Pause: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||14} height={p.size||14} fill="currentColor"><path d="M6 4h4v16H6zM14 4h4v16h-4z"/></svg>
+  ),
+  Cog: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||16} height={p.size||16} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h0a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v0a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </svg>
+  ),
+  Chev: (p) => (
+    <svg className="chev" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="m6 9 6 6 6-6"/></svg>
+  ),
+  Plus: (p) => (
+    <svg viewBox="0 0 24 24" width={p.size||14} height={p.size||14} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 5v14M5 12h14"/></svg>
+  ),
+};
+
+/* ════════════════════════════════════════════════════════════════════
+   SEVERITY & GAUGE
+   ════════════════════════════════════════════════════════════════════ */
+function severityZone(pct){
+  if (pct < 70)  return { label: "NOMINAL",  color: "#9aa3ad", bg: "#eef1f5" };
+  if (pct < 85)  return { label: "EARLY",    color: "#2f9e6e", bg: "#e6f6ee" };
+  if (pct < 95)  return { label: "MODERATE", color: "#c79014", bg: "#fbf2dc" };
+  if (pct < 99)  return { label: "SEVERE",   color: "#e07a3a", bg: "#fbe7d8" };
+                 return { label: "CRITICAL", color: "#c2271f", bg: "#fbdbd6" };
+}
+const ZONES = [
+  { from: 0,   to: 70,  color: "#bcc4cc" },
+  { from: 70,  to: 85,  color: "#3fb37a" },
+  { from: 85,  to: 95,  color: "#e2a93b" },
+  { from: 95,  to: 99,  color: "#e07a3a" },
+  { from: 99,  to: 100, color: "#c2271f" },
+];
+
+function SeverityGauge({ pct }) {
+  const cx = 160, cy = 150, r = 118, sw = 22;
+  function polar(angDeg, radius=r){
+    const a = (angDeg - 180) * Math.PI / 180;
+    return { x: cx + radius*Math.cos(a), y: cy + radius*Math.sin(a) };
+  }
+  function arcPath(fromPct, toPct){
+    const a1 = fromPct/100*180;
+    const a2 = toPct/100*180;
+    const p1 = polar(a1, r);
+    const p2 = polar(a2, r);
+    const large = (a2-a1) > 180 ? 1 : 0;
+    return `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${large} 1 ${p2.x} ${p2.y}`;
+  }
+  const needleAng = (Math.max(0,Math.min(100,pct))/100)*180 - 180;
+  const nx = cx + (r-12)*Math.cos(needleAng*Math.PI/180);
+  const ny = cy + (r-12)*Math.sin(needleAng*Math.PI/180);
+  const ticks = [0, 70, 85, 95, 99, 100];
+
+  return (
+    <svg className="gauge-svg" viewBox="0 0 320 190">
+      {ZONES.map((z,i)=>(
+        <path key={i} d={arcPath(z.from, z.to)} stroke={z.color} strokeWidth={sw} fill="none" strokeLinecap="butt"/>
+      ))}
+      {ticks.map((t,i)=>{
+        const p = polar(t/100*180, r-sw-10);
+        return <text key={i} x={p.x} y={p.y+3} fontSize="9.5" fontFamily="JetBrains Mono, monospace" fill="#6b7280" textAnchor="middle">{t}</text>;
+      })}
+      {ticks.map((t,i)=>{
+        const p1 = polar(t/100*180, r+sw/2-1);
+        const p2 = polar(t/100*180, r-sw/2+1);
+        return <line key={"t"+i} x1={p1.x} y1={p1.y} x2={p2.x} y2={p2.y} stroke="#fff" strokeWidth="1.5"/>;
+      })}
+      <line x1={cx-r-sw/2} y1={cy} x2={cx+r+sw/2} y2={cy} stroke="#e6e9ee" strokeWidth="1"/>
+      <line x1={cx} y1={cy} x2={nx} y2={ny} stroke="#1a2530" strokeWidth="2.5" strokeLinecap="round"/>
+      <circle cx={cx} cy={cy} r={9} fill="#1a2530"/>
+      <circle cx={cx} cy={cy} r={4} fill="#fff"/>
+    </svg>
+  );
+}
+
+function HarmonicBars({ bars, f0 }) {
+  const MAX = 3.5;
+  const HOT = 1.8;
+  const labelLong = (k) => ({
+    "1×":  "1× (rotation)",
+    "2×":  "2× (misalign.)",
+    "3×":  "3×",
+    "4×":  "4×",
+    "5×":  "5×",
+    "½×":  "½× (sub-sync)",
+    "BB":  "broadband",
+  })[k] || k;
+  return (
+    <div className="harm">
+      <div className="harm-hd">
+        <h3>Harmonic decomposition</h3>
+        <div className="f0">f₀ = {isFinite(f0) ? f0.toFixed(1) : "—"} Hz · z-score vs. baseline</div>
+      </div>
+      <div className="bars">
+        {bars.map((b, i) => {
+          const z = isFinite(b.z) ? b.z : 0;
+          const hot = Math.abs(z) >= HOT;
+          const w = Math.min(1, Math.abs(z)/MAX) * 50;
+          const left = z >= 0 ? 50 : (50 - w);
+          return (
+            <div className="bar-row" key={i} title={labelLong(b.k)}>
+              <div className="bar-lbl">{b.k}</div>
+              <div className="bar-track">
+                <div className="bar-tick" style={{left: `${50 + (HOT/MAX)*50}%`}}/>
+                <div className="bar-tick" style={{left: `${50 - (HOT/MAX)*50}%`}}/>
+                <div className={"bar-fill" + (hot ? " hot": "")} style={{ left: `${left}%`, width: `${w}%`}}/>
+              </div>
+              <div className={"bar-val" + (hot ? " hot":"")}>{(z>=0?"+":"")+z.toFixed(1)+"σ"}</div>
+            </div>
+          );
+        })}
+      </div>
+      <div className="harm-axis">
+        <span>−3σ</span><span>−1.8σ</span><span>0</span><span>+1.8σ</span><span>+3σ</span>
+      </div>
+    </div>
+  );
+}
+
+function PipelineMini({ phase }) {
+  function ledFor(stepIdx){
+    if (phase === "idle") return "off";
+    if (phase === "decoding") return stepIdx === 0 ? "run" : "off";
+    if (phase === "analyzing") {
+      if (stepIdx === 0) return "on";
+      if (stepIdx === 1) return "run";
+      return "off";
+    }
+    if (phase === "scoring") {
+      if (stepIdx <= 1) return "on";
+      if (stepIdx === 2) return "run";
+      return "off";
+    }
+    if (phase === "done") return "on";
+    if (phase === "error") return stepIdx === 0 ? "off" : "off";
+    return "off";
+  }
+  const items = [
+    { k:"Decode WAV",        v:"PCM"   },
+    { k:"Acoustic features", v:"STFT"  },
+    { k:"Anomaly score",     v:"z-σ"   },
+    { k:"Harmonic ODE",      v:"diag." },
+  ];
+  return (
+    <div className="pipe">
+      {items.map((it,i)=>(
+        <div className="pipe-item" key={i}>
+          <span className={"pipe-led " + ledFor(i)}/>
+          <span className="pname">{it.k}</span>
+          <span className="pmeta">{it.v}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   COMPONENTS — UI shell
+   ════════════════════════════════════════════════════════════════════ */
+function fmtBytes(n){
+  if (n == null) return "—";
+  if (n < 1024) return n + " B";
+  if (n < 1024*1024) return (n/1024).toFixed(1) + " KB";
+  return (n/1024/1024).toFixed(2) + " MB";
+}
+function fmtTime(s){
+  if (!isFinite(s)) return "0:00";
+  const m = Math.floor(s/60), r = Math.floor(s%60);
+  return `${m}:${String(r).padStart(2,"0")}`;
+}
+
+function Header({ analysis, file, audioBuffer }){
+  const fs = audioBuffer ? audioBuffer.sampleRate : null;
+  const dur = audioBuffer ? audioBuffer.duration : null;
+  const ch = audioBuffer ? audioBuffer.numberOfChannels : null;
+  return (
+    <header className="hdr">
+      <div className="hdr-row">
+        <div className="brand">
+          <div className="brand-mark"><Ico.Fan/></div>
+          <div>
+            <h1>Fan Anomaly Detection</h1>
+            <div className="sub">
+              Acoustic diagnostic system
+              <span className="dot"/>
+              <span>industrial fan health monitoring</span>
+            </div>
+          </div>
+        </div>
+        <div className="hdr-meta">
+          <span className="pill pill-status"><span className="live"/>service online</span>
+        </div>
+      </div>
+      <div className="kpis">
+        <div className="kpi">
+          <div className="k">Asset</div>
+          <div className="v">{file ? (file.name.length > 14 ? file.name.slice(0,14)+"…" : file.name.replace(/\.wav$/i,"")) : "—"}<small> · {ch ? (ch === 1 ? "mono" : ch === 2 ? "stereo" : ch+"ch") : "—"}</small></div>
+        </div>
+        <div className="kpi">
+          <div className="k">Last scored</div>
+          <div className="v">{analysis ? "just now" : "—"}<small>{analysis ? "" : ""}</small></div>
+        </div>
+        <div className="kpi">
+          <div className="k">Sample rate</div>
+          <div className="v">{fs ? (fs/1000).toFixed(fs%1000===0?0:1) : "—"}<small> kHz {ch?(ch===1?"mono":"stereo"):""}</small></div>
+        </div>
+        <div className="kpi">
+          <div className="k">Clip length</div>
+          <div className="v">{dur ? dur.toFixed(2) : "—"}<small> s</small></div>
+        </div>
+      </div>
+    </header>
+  );
+}
+
+function UploadCard({
+  phase, file, audioBuffer, audioUrl, error, calibration,
+  onFile, onClear, onAddCalib, onClearCalib, onUseAsCalib, hasResult, isNormal,
+}){
+  const inputRef = useRef(null);
+  const [drag, setDrag] = useState(false);
+  const [dragErr, setDragErr] = useState(false);
+
+  // audio element for playback
+  const audioRef = useRef(null);
+  const [playing, setPlaying] = useState(false);
+  const [curT, setCurT] = useState(0);
+  const [dur, setDur] = useState(0);
+
+  useEffect(()=>{
+    if (!audioUrl) return;
+    const a = audioRef.current;
+    if (!a) return;
+    setPlaying(false);
+    setCurT(0);
+    setDur(0);
+    const onMeta = () => setDur(a.duration || 0);
+    const onTime = () => setCurT(a.currentTime || 0);
+    const onPlay = () => setPlaying(true);
+    const onPause = () => setPlaying(false);
+    const onEnd = () => { setPlaying(false); setCurT(0); a.currentTime = 0; };
+    a.addEventListener("loadedmetadata", onMeta);
+    a.addEventListener("timeupdate", onTime);
+    a.addEventListener("play", onPlay);
+    a.addEventListener("pause", onPause);
+    a.addEventListener("ended", onEnd);
+    return () => {
+      a.removeEventListener("loadedmetadata", onMeta);
+      a.removeEventListener("timeupdate", onTime);
+      a.removeEventListener("play", onPlay);
+      a.removeEventListener("pause", onPause);
+      a.removeEventListener("ended", onEnd);
+    };
+  }, [audioUrl]);
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDrag(false);
+    setDragErr(false);
+    const f = e.dataTransfer.files[0];
+    if (!f) return;
+    if (!/\.wav$/i.test(f.name)) {
+      setDragErr(true);
+      setTimeout(()=>setDragErr(false), 1800);
+      return;
+    }
+    onFile(f);
+  };
+
+  const onSelect = (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (f) onFile(f);
+    e.target.value = "";
+  };
+
+  let statusEl;
+  if (phase === "idle") {
+    statusEl = (
+      <div className="status">
+        <span className="dot idle"/>
+        <span>idle · awaiting upload</span>
+      </div>
+    );
+  } else if (phase === "decoding" || phase === "analyzing" || phase === "scoring") {
+    const labelMap = { decoding: "decoding WAV …", analyzing: "extracting acoustic features (STFT) …", scoring: "scoring against baseline …" };
+    const pctMap = { decoding: 25, analyzing: 60, scoring: 90 };
+    statusEl = (
+      <>
+        <div className="status">
+          <span className="spin"/>
+          <span>{labelMap[phase]}</span>
+        </div>
+        <div className="progress"><i style={{width: pctMap[phase] + "%"}}/></div>
+      </>
+    );
+  } else if (phase === "error") {
+    statusEl = (
+      <div className="status err">
+        <span className="dot err"/>
+        <span>{error || "error · could not analyze clip"}</span>
+      </div>
+    );
+  } else {
+    statusEl = (
+      <div className="status">
+        <span className="dot"/>
+        <span>scored · ready for next clip</span>
+      </div>
+    );
+  }
+
+  return (
+    <section className="card">
+      <div className="card-hd">
+        <h2><span style={{color:"var(--teal-deep)"}}>●</span> Audio input</h2>
+        <span className="step">step 01</span>
+      </div>
+      <div className="card-bd">
+        <div
+          className={"drop" + (drag ? " drag":"") + (file ? " has-file":"") + (dragErr ? " error":"")}
+          onClick={()=> inputRef.current && inputRef.current.click()}
+          onDragOver={(e)=>{e.preventDefault(); setDrag(true)}}
+          onDragLeave={()=>setDrag(false)}
+          onDrop={handleDrop}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".wav,audio/wav,audio/x-wav,audio/wave"
+            onChange={onSelect}
+          />
+          <div className="drop-icon"><Ico.Cloud size={26}/></div>
+          <div className="drop-title">
+            {dragErr ? <>Only <b>.wav</b> files are accepted</>
+              : drag ? <>Release to upload <b>.wav</b></>
+              : <>Drop a <b>.wav</b> file here or click to choose</>}
+          </div>
+          <div className="drop-hint">any sample rate · mono or stereo · fan machine recording</div>
+        </div>
+
+        {file && (
+          <div className="file-chip">
+            <div className="file-ico"><Ico.Wave/></div>
+            <div className="file-meta">
+              <div className="file-name">{file.name}</div>
+              <div className="file-sub">
+                {audioBuffer
+                  ? `${audioBuffer.length.toLocaleString()} samples · ${audioBuffer.duration.toFixed(2)} s · ${fmtBytes(file.size)}`
+                  : `${fmtBytes(file.size)} · decoding…`}
+              </div>
+            </div>
+            <button className="file-x" onClick={onClear} title="Remove"><Ico.X/></button>
+          </div>
+        )}
+
+        {audioUrl && (
+          <div className="audio-row">
+            <button
+              className="audio-btn"
+              onClick={()=>{
+                const a = audioRef.current; if (!a) return;
+                if (a.paused) a.play(); else a.pause();
+              }}
+              title={playing ? "Pause" : "Play"}
+            >
+              {playing ? <Ico.Pause/> : <Ico.Play/>}
+            </button>
+            <div className="audio-time">{fmtTime(curT)}</div>
+            <div className="audio-progress" onClick={(e)=>{
+              const a = audioRef.current; if (!a || !dur) return;
+              const r = e.currentTarget.getBoundingClientRect();
+              const t = ((e.clientX - r.left) / r.width) * dur;
+              a.currentTime = Math.max(0, Math.min(dur, t));
+            }}>
+              <i style={{width: dur ? (curT/dur*100)+"%" : "0%"}}/>
+            </div>
+            <div className="audio-time">{fmtTime(dur)}</div>
+            <audio ref={audioRef} src={audioUrl} preload="metadata"/>
+          </div>
+        )}
+
+        {/* Calibration banner */}
+        <div className={"calib" + (calibration ? " active" : "")}>
+          <div className="calib-ico">
+            {calibration ? <Ico.Check size={14}/> : <Ico.Cog size={14}/>}
+          </div>
+          <div className="calib-txt">
+            <div className="calib-ttl">
+              {calibration
+                ? `Calibrated baseline · n = ${calibration.nSamples}`
+                : "Self-referential mode"}
+            </div>
+            <div className="calib-sub">
+              {calibration
+                ? "scoring against your normal samples"
+                : "z-scores from in-clip noise floor (no normals uploaded)"}
+            </div>
+          </div>
+          {hasResult && isNormal && (
+            <button className="calib-btn" onClick={onUseAsCalib} title="Add this clip as a normal sample">
+              <span className="row" style={{gap:4}}><Ico.Plus size={11}/> add as normal</span>
+            </button>
+          )}
+          {calibration && (
+            <button className="calib-btn danger" onClick={onClearCalib} title="Clear calibration">clear</button>
+          )}
+        </div>
+
+        {statusEl}
+
+        <PipelineMini phase={phase}/>
+      </div>
+    </section>
+  );
+}
+
+function ResultIdle(){
+  return (
+    <div className="placeholder">
+      <div className="icon"><Ico.Wave size={26}/></div>
+      <h3>Awaiting first scoring run</h3>
+      <p>Upload a clip to see the anomaly score, severity gauge, and ODE harmonic fault diagnosis.</p>
+      <div className="skeleton-row"><span/><span/><span/></div>
+    </div>
+  );
+}
+
+function Decision({ decision, score, peakZ, mode }){
+  if (decision === "normal") {
+    return (
+      <div className="decision dec-normal">
+        <div className="decision-ico"><Ico.Check/></div>
+        <div>
+          <div className="lbl">NORMAL</div>
+          <div className="sub">no anomaly detected · max σ = {peakZ.toFixed(2)} ({mode})</div>
+        </div>
+        <div className="score">score = {score.toFixed(3)}</div>
+      </div>
+    );
+  }
+  return (
+    <div className="decision dec-anom">
+      <div className="decision-ico"><Ico.Warn/></div>
+      <div>
+        <div className="lbl">ANOMALY DETECTED</div>
+        <div className="sub">flagged · max σ = {peakZ.toFixed(2)} ({mode}) · operator review recommended</div>
+      </div>
+      <div className="score">score = {score.toFixed(3)}</div>
+    </div>
+  );
+}
+
+function ResultPanel({ phase, analysis, features }){
+  const sev = analysis ? analysis.severity : 0;
+  const zone = severityZone(sev);
+  const isReady = (phase === "done" && analysis);
+
+  return (
+    <section className="card">
+      <div className="card-hd">
+        <h2><span style={{color:"var(--coral)"}}>●</span> Diagnostic result</h2>
+        <span className="step">step 02</span>
+      </div>
+      <div className="card-bd">
+        {!isReady ? (
+          <ResultIdle/>
+        ) : (
+          <>
+            <Decision decision={analysis.decision} score={analysis.score} peakZ={analysis.peakZ} mode={analysis.mode}/>
+
+            <div className="res-grid" style={{marginTop:18}}>
+              <div className="gauge-wrap">
+                <SeverityGauge pct={sev}/>
+                <div className="gauge-readout">
+                  <div className="gauge-pct">{sev.toFixed(1)}<small>%</small></div>
+                  <div className="gauge-label" style={{background:zone.bg, color:zone.color}}>{zone.label}</div>
+                </div>
+                <div className="gauge-zones">
+                  {["nominal","early","moderate","severe","critical"].map((z,i)=>(
+                    <span key={z} className={zone.label.toLowerCase()===z ? "cur": ""}>{z}</span>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{display:"flex",flexDirection:"column",gap:16}}>
+                {analysis.fault ? (
+                  <div className="diag">
+                    <div className="tag">ODE harmonic diagnosis</div>
+                    <div className="fault">{analysis.fault.title}<span className="why">{analysis.fault.detail}</span></div>
+                    <div className="ratio">{analysis.fault.rationale}</div>
+                  </div>
+                ) : (
+                  <div className="diag" style={{borderLeftColor:"var(--green)", background:"#f1f8f4"}}>
+                    <div className="tag">ODE harmonic diagnosis</div>
+                    <div className="fault" style={{color:"#1f6b46"}}>NO FAULT SIGNATURE<span className="why" style={{color:"#2f9e6e"}}>(all harmonics within ±1.8σ)</span></div>
+                    <div className="ratio">All harmonic and broadband z-scores fall inside the calibrated normal envelope. The clip is consistent with the training distribution; no mechanical action is recommended.</div>
+                  </div>
+                )}
+
+                <HarmonicBars bars={analysis.bars} f0={features ? features.f0 : NaN}/>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SignalView({ phase, audioBuffer, features }){
+  const [tab, setTab] = useState("spectrogram");
+  const wfRef = useRef(null);
+  const sgRef = useRef(null);
+
+  const waveform = useMemo(()=>{
+    if (!audioBuffer) return null;
+    const mono = mixToMono(audioBuffer);
+    return downsampleWaveform(mono, 1000);
+  }, [audioBuffer]);
+
+  useEffect(()=>{
+    if (tab === "waveform" && wfRef.current) drawWaveform(wfRef.current, waveform);
+  }, [tab, waveform, audioBuffer]);
+
+  useEffect(()=>{
+    if (tab === "spectrogram" && sgRef.current && features && features.frames) {
+      drawSpectrogram(sgRef.current, features.frames, features.sampleRate, features.frameSize);
+    }
+  }, [tab, features]);
+
+  useEffect(()=>{
+    const onResize = () => {
+      if (tab === "waveform" && wfRef.current) drawWaveform(wfRef.current, waveform);
+      if (tab === "spectrogram" && sgRef.current && features && features.frames) {
+        drawSpectrogram(sgRef.current, features.frames, features.sampleRate, features.frameSize);
+      }
+    };
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [tab, waveform, features]);
+
+  if (!audioBuffer || phase !== "done") return null;
+
+  return (
+    <section className="card signal-card">
+      <div className="card-hd">
+        <h2><span style={{color:"var(--blue)"}}>●</span> Signal view</h2>
+        <div className="signal-hd-tabs">
+          <button className={"sig-tab" + (tab === "spectrogram" ? " active":"")} onClick={()=>setTab("spectrogram")}>spectrogram</button>
+          <button className={"sig-tab" + (tab === "waveform" ? " active":"")} onClick={()=>setTab("waveform")}>waveform</button>
+        </div>
+      </div>
+      <div className="card-bd" style={{paddingBottom:0}}>
+        <div className="sig-canvas-wrap">
+          {tab === "waveform"
+            ? <canvas ref={wfRef} style={{height:"180px"}}/>
+            : <canvas ref={sgRef} style={{height:"260px"}}/>
+          }
+          <div className="sig-meta">
+            {tab === "spectrogram" ? (
+              <>
+                <span>STFT · {features.frameSize}-pt · hop {features.hopSize} · {features.frameCount} frames</span>
+                <span>20 Hz – {(features.sampleRate/2/1000).toFixed(1)} kHz · log-y · viridis (70 dB range)</span>
+              </>
+            ) : (
+              <>
+                <span>{audioBuffer.length.toLocaleString()} samples</span>
+                <span>{audioBuffer.numberOfChannels} ch · mixed to mono · normalized</span>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function HistoryCard({ history, onClear }){
+  return (
+    <section className="card">
+      <div className="card-hd">
+        <h2><span style={{color:"var(--muted)"}}>●</span> Recent runs</h2>
+        {history.length > 0 && (
+          <button className="calib-btn danger" onClick={onClear}>clear</button>
+        )}
+      </div>
+      <div className="card-bd" style={{padding:0}}>
+        {history.length === 0 ? (
+          <div className="hist-empty">No runs yet — upload a .wav file to populate this log.</div>
+        ) : (
+          <table className="hist-table">
+            <thead>
+              <tr>
+                <th style={{paddingLeft:20}}>File</th>
+                <th>Decision</th>
+                <th>Score</th>
+                <th>σ</th>
+                <th>Fault</th>
+                <th style={{paddingRight:20}}>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((h,i)=>(
+                <tr key={i}>
+                  <td className="name" style={{paddingLeft:20,fontFamily:"var(--sans)"}}>{h.name}</td>
+                  <td>
+                    <span className={"pill-dec " + h.decision}>{h.decision === "normal" ? "NORMAL" : "ANOMALY"}</span>
+                  </td>
+                  <td>{h.score.toFixed(3)}</td>
+                  <td>{h.peakZ.toFixed(2)}</td>
+                  <td>{h.faultTitle || "—"}</td>
+                  <td style={{paddingRight:20, color:"var(--muted)"}}>{new Date(h.t).toLocaleTimeString()}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function SettingsCard({ settings, setSettings }){
+  const [open, setOpen] = useState(false);
+  const upd = (k) => (e) => {
+    const v = e.target.type === "number" || e.target.type === "range" ? parseFloat(e.target.value) : e.target.value;
+    setSettings({ ...settings, [k]: v });
+  };
+  return (
+    <div className={"settings" + (open ? " open" : "")}>
+      <div className="settings-hd" onClick={()=>setOpen(!open)}>
+        <h2><Ico.Cog size={16}/> Settings</h2>
+        <Ico.Chev/>
+      </div>
+      <div className="settings-bd">
+        <div className="set-row">
+          <div className="set-lbl">Anomaly threshold (σ)
+            <small>flag if any harmonic or broadband z-score exceeds this — use ~3σ in self-ref mode, ~1.8σ when calibrated against normal samples</small>
+          </div>
+          <div className="row">
+            <input className="set-slider" type="range" min="0.5" max="6" step="0.1" value={settings.threshold} onChange={upd("threshold")}/>
+            <input className="set-input" style={{maxWidth:80}} type="number" min="0.5" max="6" step="0.1" value={settings.threshold} onChange={upd("threshold")}/>
+          </div>
+        </div>
+        <div className="set-row">
+          <div className="set-lbl">Fundamental search range (Hz)
+            <small>where the rotation frequency f₀ is expected</small>
+          </div>
+          <div className="row">
+            <input className="set-input" style={{maxWidth:90}} type="number" min="1" max="500" step="1" value={settings.f0Min} onChange={upd("f0Min")}/>
+            <span className="muted mono" style={{fontSize:".8rem"}}>to</span>
+            <input className="set-input" style={{maxWidth:90}} type="number" min="2" max="2000" step="1" value={settings.f0Max} onChange={upd("f0Max")}/>
+          </div>
+        </div>
+        <div className="set-row">
+          <div className="set-lbl">FastAPI backend (optional)
+            <small>POST .wav to this URL; falls back to in-browser if empty/unreachable</small>
+          </div>
+          <input className="set-input" type="text" placeholder="e.g. http://localhost:8000/predict" value={settings.backendUrl} onChange={upd("backendUrl")}/>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Toast({ toast }){
+  if (!toast) return null;
+  return <div className={"toast " + toast.kind}>{toast.msg}</div>;
+}
+
+/* ════════════════════════════════════════════════════════════════════
+   APP
+   ════════════════════════════════════════════════════════════════════ */
+function App(){
+  // Persistent settings + calibration
+  const [settings, setSettings] = useState(()=>{
+    const DEFAULTS = { threshold: 3.0, f0Min: 10, f0Max: 200, backendUrl: "", _v: 3 };
+    try {
+      const s = localStorage.getItem("fad_settings");
+      const parsed = s ? JSON.parse(s) : null;
+      // Migrate from earlier versions — old severity mapping pegged clips at SEVERE/CRITICAL.
+      if (!parsed || parsed._v !== 3) return DEFAULTS;
+      return { ...DEFAULTS, ...parsed };
+    } catch { return DEFAULTS; }
+  });
+  useEffect(()=>{ try{ localStorage.setItem("fad_settings", JSON.stringify(settings)); }catch{} }, [settings]);
+
+  const [calibration, setCalibration] = useState(()=>{
+    try { const s = localStorage.getItem("fad_calibration"); return s ? JSON.parse(s) : null; }
+    catch { return null; }
+  });
+  useEffect(()=>{
+    try {
+      if (calibration) localStorage.setItem("fad_calibration", JSON.stringify(calibration));
+      else localStorage.removeItem("fad_calibration");
+    } catch{}
+  }, [calibration]);
+
+  // Hold the raw feature dicts of normal samples so we can rebuild baseline if user adds more
+  const calibFeaturesRef = useRef([]);
+
+  // Run state
+  const [phase, setPhase] = useState("idle"); // idle | decoding | analyzing | scoring | done | error
+  const [file, setFile] = useState(null);
+  const [audioBuffer, setAudioBuffer] = useState(null);
+  const [audioUrl, setAudioUrl] = useState(null);
+  const [features, setFeatures] = useState(null);
+  const [analysis, setAnalysis] = useState(null);
+  const [errorMsg, setErrorMsg] = useState(null);
+
+  const [history, setHistory] = useState(()=>{
+    try { const s = localStorage.getItem("fad_history"); return s ? JSON.parse(s) : []; }
+    catch { return []; }
+  });
+  useEffect(()=>{
+    try { localStorage.setItem("fad_history", JSON.stringify(history.slice(0,30))); } catch{}
+  }, [history]);
+
+  const [toast, setToast] = useState(null);
+  const showToast = (msg, kind="info") => {
+    setToast({ msg, kind });
+    setTimeout(()=>setToast(null), 3000);
+  };
+
+  // Cleanup blob URL when audioUrl changes
+  useEffect(()=>{
+    return () => { if (audioUrl) URL.revokeObjectURL(audioUrl); };
+  }, [audioUrl]);
+
+  const handleFile = useCallback(async (f) => {
+    setErrorMsg(null);
+    setFile(f);
+    setAudioBuffer(null);
+    setFeatures(null);
+    setAnalysis(null);
+    if (audioUrl) { URL.revokeObjectURL(audioUrl); }
+    const newUrl = URL.createObjectURL(f);
+    setAudioUrl(newUrl);
+    setPhase("decoding");
+
+    try {
+      // Try backend first if configured
+      let backendResult = null;
+      if (settings.backendUrl && settings.backendUrl.trim()) {
+        try {
+          const fd = new FormData();
+          fd.append("file", f);
+          const resp = await fetch(settings.backendUrl, { method: "POST", body: fd });
+          if (resp.ok) {
+            backendResult = await resp.json();
+            showToast("Used FastAPI backend", "info");
+          }
+        } catch (err) {
+          console.warn("Backend call failed, falling back to in-browser:", err);
+        }
+      }
+
+      const ab = await decodeAudioFile(f);
+      setAudioBuffer(ab);
+      setPhase("analyzing");
+
+      // Yield so UI can paint the progress
+      await new Promise(r => setTimeout(r, 30));
+
+      const samples = mixToMono(ab);
+      const feats = extractFeatures(samples, ab.sampleRate, { f0Min: settings.f0Min, f0Max: settings.f0Max });
+      setFeatures(feats);
+      setPhase("scoring");
+      await new Promise(r => setTimeout(r, 20));
+
+      let result;
+      if (backendResult) {
+        // Map backend payload onto the local result shape, falling back to local computation for fields not provided
+        const localRes = scoreAnomaly(feats, calibration, settings.threshold);
+        result = {
+          ...localRes,
+          ...(backendResult.decision ? { decision: backendResult.decision } : {}),
+          ...(backendResult.score != null ? { score: backendResult.score } : {}),
+          ...(backendResult.severity != null ? { severity: backendResult.severity } : {}),
+          mode: backendResult.mode || "backend",
+        };
+      } else {
+        result = scoreAnomaly(feats, calibration, settings.threshold);
+      }
+      setAnalysis(result);
+      setPhase("done");
+
+      // Push to history
+      setHistory(h => [{
+        name: f.name,
+        size: f.size,
+        decision: result.decision,
+        score: result.score,
+        peakZ: result.peakZ,
+        faultTitle: result.fault ? result.fault.title : "",
+        t: Date.now(),
+      }, ...h].slice(0,30));
+    } catch (err) {
+      console.error(err);
+      setErrorMsg(err && err.message ? err.message : "decode failed");
+      setPhase("error");
+      showToast("Could not decode WAV — file may be corrupted or use an unsupported codec", "err");
+    }
+  }, [settings, calibration, audioUrl]);
+
+  const handleClear = () => {
+    setPhase("idle");
+    setFile(null);
+    setAudioBuffer(null);
+    setFeatures(null);
+    setAnalysis(null);
+    setErrorMsg(null);
+    if (audioUrl) { URL.revokeObjectURL(audioUrl); setAudioUrl(null); }
+  };
+
+  const handleUseAsCalib = () => {
+    if (!features) return;
+    // Strip non-serializable big arrays for storage; we only need the dB summaries
+    const minimal = {
+      harmDb: features.harmDb,
+      bbDb: features.bbDb,
+    };
+    calibFeaturesRef.current = [...calibFeaturesRef.current, minimal];
+    const baseline = aggregateBaseline(calibFeaturesRef.current.map(m => ({ harmDb: m.harmDb, bbDb: m.bbDb })));
+    if (!baseline) return;
+    // Persist a frozen baseline (with synthetic small std if only 1 sample)
+    const safe = JSON.parse(JSON.stringify(baseline));
+    if (calibFeaturesRef.current.length === 1) {
+      // With 1 sample, std = 0 → unusable. Use a default σ = 6 dB tolerance per band.
+      for (const k of Object.keys(safe.harm)) safe.harm[k].std = 6;
+      safe.bb.std = 6;
+    }
+    setCalibration(safe);
+    showToast(`Added to baseline (n=${safe.nSamples})`, "ok");
+
+    // Re-score current clip with the new baseline
+    if (features) {
+      const r = scoreAnomaly(features, safe, settings.threshold);
+      setAnalysis(r);
+    }
+  };
+
+  const handleClearCalib = () => {
+    setCalibration(null);
+    calibFeaturesRef.current = [];
+    showToast("Calibration cleared — using self-referential mode", "info");
+    // Re-score current clip
+    if (features) {
+      const r = scoreAnomaly(features, null, settings.threshold);
+      setAnalysis(r);
+    }
+  };
+
+  const handleClearHistory = () => setHistory([]);
+
+  // Re-score on threshold change (live)
+  useEffect(()=>{
+    if (features && analysis) {
+      const r = scoreAnomaly(features, calibration, settings.threshold);
+      setAnalysis(r);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.threshold]);
+
+  const isNormal = analysis && analysis.decision === "normal";
+
+  return (
+    <div className="app">
+      <Header analysis={analysis} file={file} audioBuffer={audioBuffer}/>
+
+      <div className="grid">
+        <UploadCard
+          phase={phase}
+          file={file}
+          audioBuffer={audioBuffer}
+          audioUrl={audioUrl}
+          error={errorMsg}
+          calibration={calibration}
+          hasResult={phase === "done"}
+          isNormal={isNormal}
+          onFile={handleFile}
+          onClear={handleClear}
+          onUseAsCalib={handleUseAsCalib}
+          onClearCalib={handleClearCalib}
+        />
+        <div className="stack">
+          <ResultPanel phase={phase} analysis={analysis} features={features}/>
+          <SignalView phase={phase} audioBuffer={audioBuffer} features={features}/>
+        </div>
+      </div>
+
+      <div style={{marginTop:24}}>
+        <HistoryCard history={history} onClear={handleClearHistory}/>
+      </div>
+
+      <SettingsCard settings={settings} setSettings={setSettings}/>
+
+      <footer className="ftr">
+        <div className="row">
+          <span style={{fontFamily:"var(--mono)",fontSize:".78rem"}}>fan-anomaly-detection · in-browser DSP · MIT</span>
+        </div>
+        <div className="links">
+          <span className="row" style={{gap:6}}><span className="s"/> {settings.backendUrl ? "backend configured" : "running locally"}</span>
+        </div>
+      </footer>
+
+      <Toast toast={toast}/>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App/>);
+</script>
+
+</body>
+</html>
